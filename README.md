@@ -4,6 +4,7 @@ A PySide6 + Flask application for automating label printing via WiFi commands fr
 
 ## Features
 
+- **Cross-Platform Development**: Mock printing on macOS/Linux, real printing on Windows
 - **PySide6 GUI**: Configure printer selection and button-to-label mappings
 - **Flask Server**: Receives WiFi commands from physical devices
 - **Multi-format Support**: PNG, JPG, and SVG label files
@@ -48,6 +49,7 @@ A PySide6 + Flask application for automating label printing via WiFi commands fr
 ### Production Mode (Windows)
 1. Deploy on Windows machine with DYMO printer
 2. Configure your physical device to send HTTP requests to `http://your-pc-ip:9000/print/<button_id>`
+3. See [WINDOWS_DEPLOYMENT.md](WINDOWS_DEPLOYMENT.md) for detailed Windows setup guide
 
 ## API Endpoints
 
@@ -115,6 +117,30 @@ LabelPrinterAutomation/
 ```
 
 ## Troubleshooting
+
+### Common Issues
+
+**Qt Platform Plugin Error on macOS:**
+```
+qt.qpa.plugin: Could not find the Qt platform plugin "cocoa"
+```
+**Solution:** Downgrade PySide6 to version 6.8.0:
+```bash
+pip uninstall PySide6 -y
+pip install PySide6==6.8.0
+```
+
+**Server Won't Start:**
+- Check if port 9000 is available: `lsof -i :9000`
+- Try a different port in the GUI settings
+- Check `printer_app.log` for error details
+
+**Mock Printing Not Working:**
+- Ensure `mock_prints/` directory exists and is writable
+- Check that image files exist and are accessible
+- Verify file permissions
+
+### General Troubleshooting
 
 - Ensure your printer is properly installed and visible in Windows
 - Check that label files exist and are accessible

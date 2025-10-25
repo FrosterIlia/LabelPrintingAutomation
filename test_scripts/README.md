@@ -9,6 +9,7 @@ This directory contains various test scripts for the Label Printer Automation ap
 - **`test_mock_printing.py`** - Tests the mock printing functionality on macOS
 - **`test_flask_direct.py`** - Tests Flask server startup and basic functionality
 - **`test_simple_flask.py`** - Tests a simple Flask server for comparison
+- **`test_cross_platform.py`** - Tests cross-platform functionality
 
 ### GUI Tests
 
@@ -29,6 +30,11 @@ This directory contains various test scripts for the Label Printer Automation ap
 ### Basic Functionality Test
 ```bash
 python test_scripts/test_mock_printing.py
+```
+
+### Cross-Platform Test
+```bash
+python test_scripts/test_cross_platform.py
 ```
 
 ### Flask Server Test
@@ -55,5 +61,5 @@ python test_scripts/demo.py
 
 - All test scripts use port 9000 for the main application
 - Simple Flask test uses port 9001 to avoid conflicts
-- Mock printing tests create files in the `mock_prints/` directory
-- Demo script creates sample labels in the `demo_labels/` directory
+- Mock printing tests create files in the `mock_prints/` directory (ignored by git)
+- Demo script creates sample labels in the `demo_labels/` directory (ignored by git)

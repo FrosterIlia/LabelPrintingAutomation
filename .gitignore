@@ -72,7 +72,16 @@ config.json
 printer_app.log
 mock_prints/
 demo_labels/
+*.log
 
 # Temporary files
 *.tmp
 *.temp
+*~
+*.swp
+*.swo
+
+# Duplicate files (common on macOS)
+* 2.*
+* 2/
+* 2

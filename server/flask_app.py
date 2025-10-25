@@ -28,7 +28,7 @@ class FlaskPrintServer:
                 'endpoints': ['/print/<button_id>', '/status', '/health']
             })
         
-        @self.app.route('/print/<button_id>', methods=['GET'])
+        @self.app.route('/print/<button_id>', methods=['GET', 'POST'])
         def print_label(button_id):
             """Print label for given button ID"""
             try:

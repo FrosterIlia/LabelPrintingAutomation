@@ -100,7 +100,12 @@ class PrinterManager:
             
             if self.is_windows:
                 # Real Windows printing
-                import win32api
+                try:
+                    import win32api
+                    import win32print
+                except ImportError as e:
+                    self.logger.error(f"Windows printing requires pywin32 package: {e}")
+                    return False
                 
                 # Open image with PIL to ensure it's in the right format
                 with Image.open(print_path) as img:
@@ -139,7 +144,11 @@ class PrinterManager:
                 except:
                     pass  # Ignore cleanup errors
                 
-                self.logger.info(f"Successfully sent print job for {image_path} to {printer_name}")
+                self.logger.info(f"✅ WINDOWS PRINT: Successfully sent print job for {image_path} to {printer_name}")
+                print(f"\n🖨️  WINDOWS PRINT SUCCESS!")
+                print(f"   📄 File: {os.path.basename(image_path)}")
+                print(f"   🖨️  Printer: {printer_name}")
+                print(f"   📋 Print job sent to Windows print queue")
                 return True
             else:
                 # Mock printing for macOS development

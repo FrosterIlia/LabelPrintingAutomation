@@ -52,65 +52,30 @@ class PrinterManager:
         return printer_name in available_printers
 
     def _convert_svg_to_png(self, svg_path: str) -> str:
-        """Convert SVG file to temporary PNG file using multiple fallback methods"""
-        # Method 1: Try svglib + reportlab (pure Python, no C dependencies)
+        """Convert SVG file to temporary PNG file using svglib + reportlab"""
         try:
             from svglib.svglib import renderSVG
             from reportlab.graphics import renderPM
-            from reportlab.graphics.shapes import Drawing
             
+            # Convert SVG to reportlab drawing
             drawing = renderSVG.renderSVG(svg_path)
+            
+            # Create temporary PNG file
             temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
             os.close(temp_fd)
+            
+            # Render drawing to PNG
             renderPM.drawToFile(drawing, temp_path, fmt='PNG')
-            self.logger.info("SVG converted using svglib+reportlab")
+            
+            self.logger.info("✅ SVG converted using svglib+reportlab")
             return temp_path
-        except ImportError:
-            self.logger.info("svglib not available, trying next method...")
+            
+        except ImportError as e:
+            self.logger.error(f"svglib or reportlab not installed: {e}")
+            raise ImportError("SVG support requires svglib and reportlab. Install with: pip install svglib reportlab")
         except Exception as e:
-            self.logger.warning(f"svglib conversion failed: {e}, trying next method...")
-        
-        # Method 2: Try Pillow with SVG support (if available)
-        try:
-            with Image.open(svg_path) as img:
-                temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
-                os.close(temp_fd)
-                img.save(temp_path, 'PNG')
-                self.logger.info("SVG converted using Pillow")
-                return temp_path
-        except Exception as e:
-            self.logger.warning(f"Pillow SVG conversion failed: {e}, trying next method...")
-        
-        # Method 3: Try wand (ImageMagick Python binding)
-        try:
-            from wand.image import Image as WandImage
-            with WandImage(filename=svg_path) as img:
-                img.format = 'png'
-                temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
-                os.close(temp_fd)
-                img.save(filename=temp_path)
-                self.logger.info("SVG converted using Wand (ImageMagick)")
-                return temp_path
-        except ImportError:
-            self.logger.info("Wand not available, trying next method...")
-        except Exception as e:
-            self.logger.warning(f"Wand conversion failed: {e}, trying next method...")
-        
-        # Method 4: Try cairosvg as last resort
-        try:
-            import cairosvg
-            temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
-            os.close(temp_fd)
-            cairosvg.svg2png(url=svg_path, write_to=temp_path)
-            self.logger.info("SVG converted using cairosvg")
-            return temp_path
-        except ImportError:
-            self.logger.error("No SVG conversion libraries available")
-        except Exception as e:
-            self.logger.error(f"cairosvg conversion failed: {e}")
-        
-        # If all methods fail
-        raise FileNotFoundError("SVG conversion failed. Please convert to PNG/JPG manually or install svglib: pip install svglib reportlab")
+            self.logger.error(f"SVG conversion failed: {e}")
+            raise FileNotFoundError(f"Failed to convert SVG file: {e}")
 
     def _prepare_image_for_printing(self, image_path: str) -> str:
         """Prepare image for printing, converting SVG if necessary"""
@@ -121,8 +86,8 @@ class PrinterManager:
             try:
                 return self._convert_svg_to_png(image_path)
             except ImportError:
-                self.logger.warning("SVG file detected but cairosvg not available. SVG support disabled.")
-                raise FileNotFoundError("SVG files are not supported without cairosvg library")
+                self.logger.warning("SVG file detected but svglib/reportlab not available. SVG support disabled.")
+                raise FileNotFoundError("SVG files are not supported without svglib and reportlab libraries")
         else:
             return image_path
 

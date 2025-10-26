@@ -16,7 +16,7 @@
 - **Mock printing**: Saves to `mock_prints/` directory on macOS/Linux
 - **Real printing**: Uses `win32print` on Windows with DYMO printers
 - **Threading**: Flask server runs in background thread
-- **Dependencies**: PySide6, Flask, Pillow, cairosvg (optional), pywin32 (Windows only)
+- **Dependencies**: PySide6, Flask, Pillow, svglib, reportlab, pywin32 (Windows only)
 
 ### Project Structure
 ```
@@ -34,7 +34,7 @@ LabelPrinterAutomation/
 
 ### Bug Fixes
 - Fixed excessive logging spam in printer manager
-- Resolved cairosvg import issues with optional import
+- Replaced cairosvg with svglib + reportlab for better SVG support
 - Fixed GUI threading issues with server startup
 - Resolved port conflicts by changing default port to 9000
 - Reduced status update frequency to improve performance

@@ -54,11 +54,14 @@ class PrinterManager:
     def _convert_svg_to_png(self, svg_path: str) -> str:
         """Convert SVG file to temporary PNG file using svglib + reportlab"""
         try:
-            from svglib.svglib import renderSVG
+            from svglib.svglib import svg2rlg
             from reportlab.graphics import renderPM
             
             # Convert SVG to reportlab drawing
-            drawing = renderSVG.renderSVG(svg_path)
+            drawing = svg2rlg(svg_path)
+            
+            if drawing is None:
+                raise ValueError("Failed to parse SVG file - file may be corrupted or invalid")
             
             # Create temporary PNG file
             temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
@@ -67,15 +70,32 @@ class PrinterManager:
             # Render drawing to PNG
             renderPM.drawToFile(drawing, temp_path, fmt='PNG')
             
+            # Verify the PNG was created successfully
+            if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
+                raise ValueError("PNG file was not created or is empty")
+            
             self.logger.info("✅ SVG converted using svglib+reportlab")
             return temp_path
             
         except ImportError as e:
             self.logger.error(f"svglib or reportlab not installed: {e}")
-            raise ImportError("SVG support requires svglib and reportlab. Install with: pip install svglib reportlab")
+            raise ImportError(
+                "SVG support requires svglib and reportlab. Install with: pip install svglib reportlab"
+            )
+        except OSError as e:
+            if "cairo" in str(e).lower():
+                self.logger.error(f"Cairo library not found: {e}")
+                raise ImportError(
+                    "SVG support requires Cairo libraries. "
+                    "On Windows: Download GTK+ runtime. "
+                    "On macOS: brew install cairo. "
+                    "On Linux: sudo apt-get install libcairo2-dev"
+                )
+            else:
+                raise
         except Exception as e:
             self.logger.error(f"SVG conversion failed: {e}")
-            raise FileNotFoundError(f"Failed to convert SVG file: {e}")
+            raise FileNotFoundError(f"Failed to convert SVG file '{svg_path}': {e}")
 
     def _prepare_image_for_printing(self, image_path: str) -> str:
         """Prepare image for printing, converting SVG if necessary"""

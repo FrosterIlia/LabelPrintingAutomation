@@ -57,24 +57,45 @@ class ConfigManager:
         """Set selected printer"""
         self.config["selected_printer"] = printer_name
     
-    def get_button_mappings(self) -> Dict[str, str]:
-        """Get button ID to label file mappings"""
+    def get_button_mappings(self) -> Dict[str, Dict[str, str]]:
+        """Get button ID to label file mappings with orientation"""
         return self.config.get("button_mappings", {})
     
-    def set_button_mappings(self, mappings: Dict[str, str]) -> None:
-        """Set button ID to label file mappings"""
+    def set_button_mappings(self, mappings: Dict[str, Dict[str, str]]) -> None:
+        """Set button ID to label file mappings with orientation"""
         self.config["button_mappings"] = mappings
     
-    def add_button_mapping(self, button_id: str, label_file: str) -> None:
-        """Add a single button mapping"""
+    def add_button_mapping(self, button_id: str, label_file: str, orientation: str = "portrait") -> None:
+        """Add a single button mapping with orientation"""
         if "button_mappings" not in self.config:
             self.config["button_mappings"] = {}
-        self.config["button_mappings"][button_id] = label_file
+        self.config["button_mappings"][button_id] = {
+            "file": label_file,
+            "orientation": orientation
+        }
     
     def remove_button_mapping(self, button_id: str) -> None:
         """Remove a button mapping"""
         if "button_mappings" in self.config and button_id in self.config["button_mappings"]:
             del self.config["button_mappings"][button_id]
+    
+    def get_button_mapping(self, button_id: str) -> Optional[Dict[str, str]]:
+        """Get specific button mapping with file and orientation"""
+        mappings = self.get_button_mappings()
+        return mappings.get(button_id)
+    
+    def update_button_mapping(self, button_id: str, label_file: str = None, orientation: str = None) -> None:
+        """Update specific button mapping"""
+        if "button_mappings" not in self.config:
+            self.config["button_mappings"] = {}
+        
+        if button_id not in self.config["button_mappings"]:
+            self.config["button_mappings"][button_id] = {"file": "", "orientation": "portrait"}
+        
+        if label_file is not None:
+            self.config["button_mappings"][button_id]["file"] = label_file
+        if orientation is not None:
+            self.config["button_mappings"][button_id]["orientation"] = orientation
     
     def get_server_config(self) -> tuple[str, int]:
         """Get server host and port"""

@@ -42,7 +42,16 @@ class FlaskPrintServer:
                         'error': f'Button ID "{button_id}" not configured'
                     }), 404
                 
-                label_file = button_mappings[button_id]
+                # Get mapping data (handle both old and new format)
+                mapping_data = button_mappings[button_id]
+                if isinstance(mapping_data, dict):
+                    label_file = mapping_data.get("file", "")
+                    orientation = mapping_data.get("orientation", "portrait")
+                else:
+                    # Backward compatibility with old format
+                    label_file = mapping_data
+                    orientation = "portrait"
+                
                 selected_printer = self.config_manager.get_selected_printer()
                 
                 if not selected_printer:
@@ -52,16 +61,17 @@ class FlaskPrintServer:
                         'error': 'No printer selected'
                     }), 500
                 
-                # Print the label
-                success = self.printer_manager.print_image(label_file, selected_printer)
+                # Print the label with orientation
+                success = self.printer_manager.print_image(label_file, selected_printer, orientation)
                 
                 if success:
-                    self.logger.info(f"Successfully printed label for button {button_id}: {label_file}")
+                    self.logger.info(f"Successfully printed label for button {button_id}: {label_file} ({orientation})")
                     return jsonify({
                         'success': True,
                         'message': f'Print job sent for button {button_id}',
                         'label_file': label_file,
-                        'printer': selected_printer
+                        'printer': selected_printer,
+                        'orientation': orientation
                     })
                 else:
                     self.logger.error(f"Failed to print label for button {button_id}: {label_file}")

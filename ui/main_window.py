@@ -134,8 +134,8 @@ class MainWindow(QMainWindow):
         
         # Table for button mappings
         self.mappings_table = QTableWidget()
-        self.mappings_table.setColumnCount(2)
-        self.mappings_table.setHorizontalHeaderLabels(["Button ID", "Label File"])
+        self.mappings_table.setColumnCount(3)
+        self.mappings_table.setHorizontalHeaderLabels(["Button ID", "Label File", "Orientation"])
         self.mappings_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.mappings_table.setSelectionBehavior(QTableWidget.SelectRows)
         layout.addWidget(self.mappings_table)
@@ -260,20 +260,31 @@ class MainWindow(QMainWindow):
         mappings = self.config_manager.get_button_mappings()
         self.mappings_table.setRowCount(len(mappings))
         
-        for row, (button_id, label_file) in enumerate(mappings.items()):
+        for row, (button_id, mapping_data) in enumerate(mappings.items()):
             self.mappings_table.setItem(row, 0, QTableWidgetItem(button_id))
+            
+            # Handle both old format (string) and new format (dict)
+            if isinstance(mapping_data, dict):
+                label_file = mapping_data.get("file", "")
+                orientation = mapping_data.get("orientation", "portrait")
+            else:
+                # Backward compatibility with old format
+                label_file = mapping_data
+                orientation = "portrait"
+            
             self.mappings_table.setItem(row, 1, QTableWidgetItem(label_file))
+            self.mappings_table.setItem(row, 2, QTableWidgetItem(orientation.title()))
     
     def add_mapping(self):
         """Add new button mapping"""
         dialog = MappingDialog(self)
         if dialog.exec():
-            button_id, label_file = dialog.get_mapping()
+            button_id, label_file, orientation = dialog.get_mapping()
             if button_id and label_file:
-                self.config_manager.add_button_mapping(button_id, label_file)
+                self.config_manager.add_button_mapping(button_id, label_file, orientation)
                 self.config_manager.save_config()
                 self.load_mappings()
-                self.logger.info(f"Added mapping: {button_id} -> {label_file}")
+                self.logger.info(f"Added mapping: {button_id} -> {label_file} ({orientation})")
     
     def edit_mapping(self):
         """Edit selected button mapping"""
@@ -284,18 +295,19 @@ class MainWindow(QMainWindow):
         
         button_id = self.mappings_table.item(current_row, 0).text()
         label_file = self.mappings_table.item(current_row, 1).text()
+        orientation = self.mappings_table.item(current_row, 2).text().lower()
         
-        dialog = MappingDialog(self, button_id, label_file)
+        dialog = MappingDialog(self, button_id, label_file, orientation)
         if dialog.exec():
-            new_button_id, new_label_file = dialog.get_mapping()
+            new_button_id, new_label_file, new_orientation = dialog.get_mapping()
             if new_button_id and new_label_file:
                 # Remove old mapping
                 self.config_manager.remove_button_mapping(button_id)
                 # Add new mapping
-                self.config_manager.add_button_mapping(new_button_id, new_label_file)
+                self.config_manager.add_button_mapping(new_button_id, new_label_file, new_orientation)
                 self.config_manager.save_config()
                 self.load_mappings()
-                self.logger.info(f"Updated mapping: {new_button_id} -> {new_label_file}")
+                self.logger.info(f"Updated mapping: {new_button_id} -> {new_label_file} ({new_orientation})")
     
     def remove_mapping(self):
         """Remove selected button mapping"""
@@ -331,11 +343,11 @@ class MainWindow(QMainWindow):
 
 
 class MappingDialog(QDialog):
-    def __init__(self, parent=None, button_id="", label_file=""):
+    def __init__(self, parent=None, button_id="", label_file="", orientation="portrait"):
         super().__init__(parent)
         self.setWindowTitle("Button Mapping")
         self.setModal(True)
-        self.resize(400, 150)
+        self.resize(400, 200)
         
         layout = QVBoxLayout(self)
         
@@ -356,6 +368,16 @@ class MappingDialog(QDialog):
         browse_btn.clicked.connect(self.browse_file)
         file_layout.addWidget(browse_btn)
         layout.addLayout(file_layout)
+        
+        # Orientation
+        orientation_layout = QHBoxLayout()
+        orientation_layout.addWidget(QLabel("Orientation:"))
+        self.orientation_combo = QComboBox()
+        self.orientation_combo.addItems(["Portrait", "Landscape"])
+        self.orientation_combo.setCurrentText(orientation.title())
+        orientation_layout.addWidget(self.orientation_combo)
+        orientation_layout.addStretch()
+        layout.addLayout(orientation_layout)
         
         # Buttons
         button_layout = QHBoxLayout()
@@ -380,5 +402,9 @@ class MappingDialog(QDialog):
     
     def get_mapping(self):
         """Get the mapping values"""
-        return self.button_id_edit.text(), self.label_file_edit.text()
+        return (
+            self.button_id_edit.text(), 
+            self.label_file_edit.text(),
+            self.orientation_combo.currentText().lower()
+        )
 

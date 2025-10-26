@@ -89,8 +89,7 @@ class PrinterManager:
 
             # Open printer
             hprinter = win32print.OpenPrinter(printer_name)
-            printer_dc = win32ui.CreateDC()
-            printer_dc.CreatePrinterDC(printer_name)
+            printer_dc = win32ui.CreatePrinterDC(printer_name)
 
             # Set orientation if landscape
             if orientation.lower() == "landscape":
@@ -219,7 +218,7 @@ class PrinterManager:
             os.close(temp_fd)
             test_img.save(temp_path, 'PNG')
 
-            result = self.print_image(temp_path, printer_name)
+            result = self.print_image(temp_path, printer_name, "portrait")
 
             try:
                 os.unlink(temp_path)

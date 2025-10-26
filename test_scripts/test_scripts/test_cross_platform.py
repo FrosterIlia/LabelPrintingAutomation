@@ -56,7 +56,7 @@ def test_cross_platform():
     # Test printing
     print(f"\n5. Testing print functionality...")
     try:
-        success = printer_manager.print_image(test_path, test_printer)
+        success = printer_manager.print_image(test_path, test_printer, "portrait")
         if success:
             print("   ✅ Print test successful!")
             if system != "Windows":

@@ -67,7 +67,7 @@ def test_mock_printing():
     
     # Test mock printing
     print("\n4. Testing mock printing...")
-    success = printer_manager.print_image(test_path, test_printer)
+    success = printer_manager.print_image(test_path, test_printer, "portrait")
     print(f"   Print result: {'✅ SUCCESS' if success else '❌ FAILED'}")
     
     # Test print functionality

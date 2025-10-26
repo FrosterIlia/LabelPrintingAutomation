@@ -89,15 +89,16 @@ class PrinterManager:
 
             # Open printer
             hprinter = win32print.OpenPrinter(printer_name)
-            printer_dc = win32ui.CreatePrinterDC(printer_name)
+            printer_dc = win32ui.CreateDC()
+            printer_dc.CreatePrinterDC(printer_name)
 
             # Set orientation if landscape
             if orientation.lower() == "landscape":
                 # Set landscape mode
                 printer_dc.SetMapMode(2)  # MM_LOMETRIC
                 # Rotate 90 degrees for landscape
-                printer_dc.SetViewportOrg(0, printer_dc.GetDeviceCaps(10))  # VERTRES
-                printer_dc.SetViewportExt(printer_dc.GetDeviceCaps(10), -printer_dc.GetDeviceCaps(8))  # Swap and negate
+                printer_dc.SetViewportOrg((0, printer_dc.GetDeviceCaps(10)))  # VERTRES
+                printer_dc.SetViewportExt((printer_dc.GetDeviceCaps(10), -printer_dc.GetDeviceCaps(8)))  # Swap and negate
 
             # Start document
             printer_dc.StartDoc(image_path)

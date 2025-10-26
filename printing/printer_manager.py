@@ -52,47 +52,39 @@ class PrinterManager:
         return printer_name in available_printers
 
     def _convert_svg_to_png(self, svg_path: str) -> str:
-        """Convert SVG file to temporary PNG file using svglib + reportlab"""
+        """Convert SVG file to temporary PNG file using svglib + reportlab (no Cairo)."""
+        if not os.path.exists(svg_path):
+            raise FileNotFoundError(f"Image file not found: {svg_path}")
+
         try:
             from svglib.svglib import svg2rlg
             from reportlab.graphics import renderPM
-            
-            # Convert SVG to reportlab drawing
+        except ImportError as e:
+            self.logger.error(f"svglib/reportlab missing: {e}")
+            raise ImportError(
+                "SVG support requires svglib and reportlab. Install: pip install svglib reportlab"
+            )
+
+        try:
             drawing = svg2rlg(svg_path)
-            
             if drawing is None:
-                raise ValueError("Failed to parse SVG file - file may be corrupted or invalid")
-            
-            # Create temporary PNG file
-            temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
-            os.close(temp_fd)
-            
-            # Render drawing to PNG
-            renderPM.drawToFile(drawing, temp_path, fmt='PNG')
-            
-            # Verify the PNG was created successfully
+                raise ValueError("Failed to parse SVG (invalid or unsupported).")
+
+            # Create temp PNG path
+            temp_fd, temp_path = tempfile.mkstemp(suffix=".png")
+            os.close(temp_fd)  # close the handle immediately (Windows lock avoidance)
+
+            # Render to PNG (ReportLab uses Pillow internally; no Cairo)
+            # You can tweak dpi if you need crisper labels (e.g., dpi=300)
+            renderPM.drawToFile(drawing, temp_path, fmt="PNG")
+
+            # Sanity check
             if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
-                raise ValueError("PNG file was not created or is empty")
-            
+                raise ValueError("PNG render produced an empty file.")
+
             self.logger.info("✅ SVG converted using svglib+reportlab")
             return temp_path
-            
-        except ImportError as e:
-            self.logger.error(f"svglib or reportlab not installed: {e}")
-            raise ImportError(
-                "SVG support requires svglib and reportlab. Install with: pip install svglib reportlab"
-            )
-        except OSError as e:
-            if "cairo" in str(e).lower():
-                self.logger.error(f"Cairo library not found: {e}")
-                raise ImportError(
-                    "SVG support requires Cairo libraries. "
-                    "On Windows: Download GTK+ runtime. "
-                    "On macOS: brew install cairo. "
-                    "On Linux: sudo apt-get install libcairo2-dev"
-                )
-            else:
-                raise
+
         except Exception as e:
             self.logger.error(f"SVG conversion failed: {e}")
             raise FileNotFoundError(f"Failed to convert SVG file '{svg_path}': {e}")

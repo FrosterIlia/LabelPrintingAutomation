@@ -52,20 +52,65 @@ class PrinterManager:
         return printer_name in available_printers
 
     def _convert_svg_to_png(self, svg_path: str) -> str:
-        """Convert SVG file to temporary PNG file"""
+        """Convert SVG file to temporary PNG file using multiple fallback methods"""
+        # Method 1: Try svglib + reportlab (pure Python, no C dependencies)
+        try:
+            from svglib.svglib import renderSVG
+            from reportlab.graphics import renderPM
+            from reportlab.graphics.shapes import Drawing
+            
+            drawing = renderSVG.renderSVG(svg_path)
+            temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
+            os.close(temp_fd)
+            renderPM.drawToFile(drawing, temp_path, fmt='PNG')
+            self.logger.info("SVG converted using svglib+reportlab")
+            return temp_path
+        except ImportError:
+            self.logger.info("svglib not available, trying next method...")
+        except Exception as e:
+            self.logger.warning(f"svglib conversion failed: {e}, trying next method...")
+        
+        # Method 2: Try Pillow with SVG support (if available)
+        try:
+            with Image.open(svg_path) as img:
+                temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
+                os.close(temp_fd)
+                img.save(temp_path, 'PNG')
+                self.logger.info("SVG converted using Pillow")
+                return temp_path
+        except Exception as e:
+            self.logger.warning(f"Pillow SVG conversion failed: {e}, trying next method...")
+        
+        # Method 3: Try wand (ImageMagick Python binding)
+        try:
+            from wand.image import Image as WandImage
+            with WandImage(filename=svg_path) as img:
+                img.format = 'png'
+                temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
+                os.close(temp_fd)
+                img.save(filename=temp_path)
+                self.logger.info("SVG converted using Wand (ImageMagick)")
+                return temp_path
+        except ImportError:
+            self.logger.info("Wand not available, trying next method...")
+        except Exception as e:
+            self.logger.warning(f"Wand conversion failed: {e}, trying next method...")
+        
+        # Method 4: Try cairosvg as last resort
         try:
             import cairosvg
-        except ImportError:
-            raise ImportError("cairosvg is not available. Cannot convert SVG files.")
-
-        try:
             temp_fd, temp_path = tempfile.mkstemp(suffix='.png')
             os.close(temp_fd)
             cairosvg.svg2png(url=svg_path, write_to=temp_path)
+            self.logger.info("SVG converted using cairosvg")
             return temp_path
+        except ImportError:
+            self.logger.error("No SVG conversion libraries available")
         except Exception as e:
-            self.logger.error(f"Error converting SVG to PNG: {e}")
-            raise
+            self.logger.error(f"cairosvg conversion failed: {e}")
+        
+        # If all methods fail
+        raise FileNotFoundError("SVG conversion failed. Please convert to PNG/JPG manually or install svglib: pip install svglib reportlab")
 
     def _prepare_image_for_printing(self, image_path: str) -> str:
         """Prepare image for printing, converting SVG if necessary"""
@@ -92,40 +137,49 @@ class PrinterManager:
             printer_dc = win32ui.CreateDC()
             printer_dc.CreatePrinterDC(printer_name)
 
-            # Set orientation if landscape
-            if orientation.lower() == "landscape":
-                # Set landscape mode
-                printer_dc.SetMapMode(2)  # MM_LOMETRIC
-                # Rotate 90 degrees for landscape
-                printer_dc.SetViewportOrg((0, printer_dc.GetDeviceCaps(10)))  # VERTRES
-                printer_dc.SetViewportExt((printer_dc.GetDeviceCaps(10), -printer_dc.GetDeviceCaps(8)))  # Swap and negate
+            # Get printable area in pixels
+            HORZRES = printer_dc.GetDeviceCaps(8)
+            VERTRES = printer_dc.GetDeviceCaps(10)
+            printable_area = (HORZRES, VERTRES)
 
             # Start document
             printer_dc.StartDoc(image_path)
             printer_dc.StartPage()
 
-            # Open image
+            # Load and prep image
             img = Image.open(image_path)
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
+            if img.mode != "RGB":
+                img = img.convert("RGB")
 
             # Rotate image if landscape
             if orientation.lower() == "landscape":
-                img = img.rotate(90, expand=True)
+                img = img.rotate(-90, expand=True)  # rotate clockwise
 
-            # Calculate printable area
-            printable_area = (
-                printer_dc.GetDeviceCaps(8),   # HORZRES
-                printer_dc.GetDeviceCaps(10)   # VERTRES
-            )
+            # Scale image to fit printable area
             img_width, img_height = img.size
             scale = min(printable_area[0] / img_width, printable_area[1] / img_height)
             scaled_width = int(img_width * scale)
             scaled_height = int(img_height * scale)
 
-            # Draw to printer
+            # Center on page
+            left = int((printable_area[0] - scaled_width) / 2)
+            top = int((printable_area[1] - scaled_height) / 2)
+            box = (left, top, left + scaled_width, top + scaled_height)
+
+            # Draw to printer DC
             dib = ImageWin.Dib(img)
-            dib.draw(printer_dc.GetHandleOutput(), (0, 0, scaled_width, scaled_height))
+            hdc = printer_dc.GetHandleOutput()
+
+            # Try stretch_draw first (newer Pillow)
+            if hasattr(dib, "stretch_draw"):
+                dib.stretch_draw(hdc, box)
+            else:
+                # Some Pillow versions only have draw(hdc, box)
+                try:
+                    dib.draw(hdc, box)
+                except TypeError:
+                    # Fallback if draw only accepts 1 arg
+                    dib.draw(hdc)
 
             # Finish print job
             printer_dc.EndPage()
@@ -143,6 +197,7 @@ class PrinterManager:
         except Exception as e:
             self.logger.error(f"Direct Windows print failed: {e}")
             return False
+
 
     def _mock_print(self, image_path: str, printer_name: str, orientation: str = "portrait") -> bool:
         """Mock printing functionality for development"""

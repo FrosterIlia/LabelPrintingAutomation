@@ -61,23 +61,47 @@ class FlaskPrintServer:
                         'error': 'No printer selected'
                     }), 500
                 
-                # Print the label with orientation
-                success = self.printer_manager.print_image(label_file, selected_printer, orientation)
-                
-                if success:
-                    self.logger.info(f"Successfully printed label for button {button_id}: {label_file} ({orientation})")
+                # Quantity from query params (default 1)
+                try:
+                    quantity_param = request.args.get('quantity', '1')
+                    quantity = int(quantity_param)
+                except Exception:
+                    quantity = 1
+                if quantity < 1:
+                    quantity = 1
+                if quantity > 50:
+                    quantity = 50  # simple safety cap
+
+                # Print requested quantity
+                successes = 0
+                failures = 0
+                for _ in range(quantity):
+                    if self.printer_manager.print_image(label_file, selected_printer, orientation):
+                        successes += 1
+                    else:
+                        failures += 1
+
+                if failures == 0:
+                    self.logger.info(f"Printed {successes}/{quantity} for button {button_id}: {label_file} ({orientation})")
                     return jsonify({
                         'success': True,
-                        'message': f'Print job sent for button {button_id}',
+                        'message': f'Print jobs sent for button {button_id}',
                         'label_file': label_file,
                         'printer': selected_printer,
-                        'orientation': orientation
+                        'orientation': orientation,
+                        'requested_quantity': quantity,
+                        'printed': successes
                     })
                 else:
-                    self.logger.error(f"Failed to print label for button {button_id}: {label_file}")
+                    self.logger.error(f"Partial/failed prints {successes}/{quantity} for button {button_id}: {label_file}")
                     return jsonify({
                         'success': False,
-                        'error': f'Failed to print label: {label_file}'
+                        'error': f'Printed {successes} of {quantity} requested',
+                        'label_file': label_file,
+                        'printer': selected_printer,
+                        'orientation': orientation,
+                        'requested_quantity': quantity,
+                        'printed': successes
                     }), 500
                     
             except Exception as e:

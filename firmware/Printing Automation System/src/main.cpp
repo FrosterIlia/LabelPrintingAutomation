@@ -113,7 +113,15 @@ void encoder_handler()
 
   if (encoder.click())
   {
-    Serial.println("Button CLICK");
+    Serial.println("Encoder CLICK");
+    if (current_label.get_quantity() > 0)
+    {
+      http_handler.send_post(current_label.get_id(), current_label.get_quantity());
+    }
+    else
+    {
+      Serial.println(F("Nothing to print"));
+    }
   }
 }
 

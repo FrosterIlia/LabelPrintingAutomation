@@ -79,7 +79,7 @@ bool HttpHandler::send_post(const uint8_t &label_id, const uint16_t &quantity)
         return false;
 
     // Build URL: http://<host>:<port>/print/<button_id>
-    String url = String(F("http://")) + SERVER_HOST + ":" + String(SERVER_PORT) + F("/print/") + String(label_id);
+    String url = String(F("http://")) + SERVER_HOST + ":" + String(SERVER_PORT) + F("/print/") + String(label_id) + F("?quantity=") + quantity;
 
     // Body per request: the same string as the URL
     String body = url;

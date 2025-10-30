@@ -40,3 +40,8 @@ void Label::set_quantity(const uint16_t &value)
 {
     _quantity = value;
 }
+
+uint8_t Label::get_id() const
+{
+    return _id;
+}

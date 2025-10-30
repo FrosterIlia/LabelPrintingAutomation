@@ -18,6 +18,7 @@ class Label
     bool is_selected();
     const char* get_name() const;
     uint16_t get_quantity() const;
+    uint8_t get_id() const;
 
     void set_quantity(const uint16_t &value);
 

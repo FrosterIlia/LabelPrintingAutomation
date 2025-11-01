@@ -19,8 +19,12 @@
 #define BTN2_PIN GPIO_NUM_4
 #define BTN3_PIN GPIO_NUM_22
 #define BTN4_PIN GPIO_NUM_15
+#define BTN5_PIN GPIO_NUM_13
+#define BTN6_PIN GPIO_NUM_12
+#define BTN7_PIN GPIO_NUM_14
+#define BTN8_PIN GPIO_NUM_27
 
-#define LABELS_NUM 4
+#define LABELS_NUM 7
 
 void labels_handler();
 void encoder_handler();
@@ -32,10 +36,13 @@ EncButton encoder(PIN_S1, PIN_S2, PIN_KEY);
 HttpHandler http_handler;
 
 Label labels[LABELS_NUM] = {
-    {BTN1_PIN, "Headamame inside"},
-    {BTN2_PIN, "Minamame inside"},
-    {BTN3_PIN, "Head Experience"},
-    {BTN4_PIN, "Head Precision"}};
+    {BTN1_PIN, "Headamame Inside"},
+    {BTN2_PIN, "Headamame Experience"},
+    {BTN3_PIN, "Headamame Precision"},
+    {BTN4_PIN, "Headamame Classic"},
+    {BTN5_PIN, "Minamame Inside"},
+    {BTN6_PIN, "Minamame Precision"},
+    {BTN7_PIN, "Minamame Classic"}};
 
 uint8_t selected_label_index = 0;
 
@@ -78,8 +85,6 @@ void labels_handler()
     if (labels[i].is_selected())
     {
       selected_label_index = i;
-      Serial.print(F("Selected label: "));
-      Serial.println(labels[selected_label_index].get_name());
     }
   }
 }
@@ -141,9 +146,11 @@ void screen_handler()
   screen.clear();
   screen.home();
   screen.print(labels[current_index].get_name());
-  screen.setCursor(63, 4);
+  screen.setCursor(60, 4);
+  screen.setScale(2);
   screen.print(current_quantity);
   screen.update();
+  screen.setScale(1);
 
   prev_label_index = current_index;
   prev_quantity = current_quantity;
